@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Wyświetlacz krawędziowy - podgląd</title>
+  <style>
+    :root{
+      --bg:#020203;
+      --panel:#071018;
+      --accent:#00e676;
+      --muted:#86c4b3;
+      --danger:#ff5252;
+      --text:#e6f7ef;
+      --card:#08121a;
+    }
+    html,body{
+      height:100%;
+      margin:0;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, var(--bg) 0%, #04040a 100%);
+      color:var(--text);
+    }
+
+    .wrap{
+      box-sizing:border-box;
+      width: 100%;
+      height: 100%;
+      display:flex;
+      flex-direction:column;
+      align-items:stretch;
+      justify-content:flex-start;
+      padding: 28px;
+    }
+
+    /* Header: station + time */
+    .header{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:20px;
+      margin-bottom:12px;
+    }
+
+    .station{
+      font-size: clamp(28px, 4.2vw, 48px);
+      font-weight:800;
+      letter-spacing:0.6px;
+      color:var(--accent);
+      text-transform:uppercase;
+      margin:0;
+    }
+
+    .departure{
+      text-align:right;
+      min-width:160px;
+    }
+    .departure-time{
+      font-size: clamp(20px,3.2vw,36px);
+      font-weight:700;
+      color:var(--text);
+    }
+    .departure-note{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    /* Delay badge */
+    .delay{
+      margin-top:8px;
+      font-weight:700;
+      color:var(--danger);
+      background: rgba(255,82,82,0.08);
+      border:1px solid rgba(255,82,82,0.16);
+      padding:6px 10px;
+      border-radius:8px;
+      display:inline-block;
+    }
+
+    /* Intermediate stops (scrollable) */
+    .intermediate-wrap{
+      margin-top:16px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+      border-radius:10px;
+      padding:10px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.45) inset;
+    }
+
+    .intermediate-title{
+      font-size:13px;
+      color:var(--muted);
+      margin:0 0 8px 0;
+      padding-left:6px;
+    }
+
+    .intermediate-list{
+      max-height: 135px;         /* ogranicz wysokość listy */
+      overflow: hidden;
+      position:relative;
+    }
+
+    /* Inner list that will scroll vertically if too long */
+    .intermediate-inner{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      padding-right:8px;
+      transform: translateY(0);
+      animation: none;
+    }
+
+    .stop-item{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:8px 12px;
+      background: rgba(255,255,255,0.02);
+      border-radius:6px;
+      font-size:16px;
+      color:var(--text);
+    }
+    .stop-name{ font-weight:600; }
+    .stop-time{ color:var(--muted); font-size:14px; }
+
+    /* train details row */
+    .train-row{
+      margin-top:16px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding:12px;
+      background:var(--card);
+      border-radius:10px;
+    }
+    .train-left{
+      display:flex;
+      flex-direction:column;
+    }
+    .train-type{
+      font-size:18px;
+      font-weight:800;
+      color:var(--accent);
+    }
+    .train-number{
+      font-size:22px;
+      font-weight:900;
+      letter-spacing:1px;
+      color:var(--text);
+    }
+    .carrier{
+      color:var(--muted);
+      font-size:24px;
+      margin-top:4px;
+      margin-right:6px;
+    }
+
+    /* small screens adjustments */
+    @media (max-width:600px){
+      .intermediate-list{ max-height: 120px; }
+      .wrap{ padding:14px; }
+    }
+
+    /* Auto-scroll animation (will be applied dynamically via JS when needed) */
+    @keyframes scrollUp {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(var(--scroll-distance)); }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1 id="station" class="station">Ładowanie...</h1>
+      <div class="departure">
+        <div id="time" class="departure-time">--:--</div>
+        <div class="departure-note">Planowany odjazd</div>
+        <div id="delay" class="delay" style="display:none">+0 min</div>
+      </div>
+    </div>
+
+    <div class="intermediate-wrap">
+      <p class="intermediate-title">Kolejne stacje</p>
+      <div class="intermediate-list" aria-live="polite">
+        <div id="intermediateInner" class="intermediate-inner">
+          <!-- items injected here -->
+        </div>
+      </div>
+    </div>
+
+    <div class="train-row">
+      <div class="train-left">
+        <div id="train_type" class="train-type">—typ—</div>
+        <div id="train_number" class="train-number">—0000—</div>
+      </div>
+      <div class="train-right">
+        <div id="carrier" class="carrier">Przewoźnik</div>
+      </div>
+    </div>
+  </div>
+
+    <script type="module">
+    /* -----------------------------
+       PARAMETRY WYGLĄDU Z URL
+    ----------------------------- */
+    // 1. Pobieramy tylko display_id z URL
+    const params = new URLSearchParams(window.location.search);
+    const displayId = params.get("display_id");
+
+    let maxIntermediates, theme, trackId;
+
+    // 1. Ładowanie wyglądu
+    async function loadAppearance() {
+        const data = await fetch(`/api/displays/display/${displayId}`).then(r => r.json());
+
+        applyDisplayAppearance(data);
+        applyTheme();
+    }
+
+    // 2. Funkcja stosująca wygląd
+    function applyDisplayAppearance(data) {
+        document.documentElement.style.setProperty("--accent", "#" + data.main_color);
+        document.documentElement.style.setProperty("--bg", "#" + data.background_color);
+        document.body.style.fontFamily = `"${data.font}", Roboto, Arial, sans-serif`;
+        document.title = data.alias ? `Wyświetlacz: ${data.alias}` : "Wyświetlacz krawędziowy - podgląd";
+
+        maxIntermediates = parseInt(data.intermediates_number || 5, 10);
+
+        // theme jest boolean – konwertujemy poprawnie:
+        theme = data.theme ? 1 : 0;
+
+        trackId = parseInt(data.track_id);
+    }
+
+    // 3. Osobna funkcja ustawiająca jasny/ciemny motyw
+    function applyTheme() {
+        if (theme === 1) {
+            // JASNY
+            document.documentElement.style.setProperty("--text", "#000");
+            document.documentElement.style.setProperty("--card", "#fff");
+            document.documentElement.style.setProperty("--muted", "#444");
+        }
+        else {
+            // CIEMNY
+            document.documentElement.style.setProperty("--text", "#e6f7ef");
+            document.documentElement.style.setProperty("--card", "#08121a");
+            document.documentElement.style.setProperty("--muted", "#86c4b3");
+        }
+    }
+
+    // 4. Start – czekamy aż wygląd się załaduje
+    await loadAppearance();
+
+    connectAppearanceWS();
+  
+    // 5. WebSocket aktualizujący wygląd w locie
+    function connectAppearanceWS() {
+      const wsview = new WebSocket(`/ws/displays/appearance/${displayId}`);
+
+      wsview.onmessage = async () => {
+          console.log("Appearance updated — refreshing...");
+          await loadAppearance();
+      };
+
+      wsview.onclose = () => {
+          setTimeout(connectAppearanceWS, 5000);
+      };
+    }
+
+    connectWS();
+    /* -----------------------------
+       WEBSOCKET – ODBIÓR DANYCH
+    ----------------------------- */
+    function connectWS() {
+      if (!trackId) {
+        document.getElementById("station").textContent = "Brak ID toru.";
+      } else {
+        const ws = new WebSocket(`/ws/displays/edge-display-data/${trackId}`);
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.error) {
+            document.getElementById("station").textContent = data.error;
+            document.getElementById("time").textContent = "";
+            document.getElementById("delay").textContent = "";
+            document.getElementById("train_type").textContent = data.train_type;
+            document.getElementById("train_number").textContent = data.train_number;
+            document.getElementById("carrier").textContent = data.carrier;
+            document.getElementById("intermediateInner").innerHTML = "";
+            return;
+          }
+
+          document.getElementById("station").textContent = data.station;
+          document.getElementById("time").textContent = data.departure_time;
+          const delayEl = document.getElementById("delay");
+          // delay
+          if(data.departure_delay === null || data.departure_delay === undefined || data.departure_delay === 0){
+            delayEl.style.display = "none";
+          } else {
+            delayEl.style.display = "inline-block";
+            delayEl.textContent = (data.departure_delay > 0 ? "Opóźnienie " : "") + String(data.departure_delay) + " min";
+          }
+          document.getElementById("train_type").textContent = data.train_type;
+          document.getElementById("train_number").textContent = data.train_number;
+          document.getElementById("carrier").textContent = data.carrier;
+          const intermediateInner = document.getElementById("intermediateInner");
+
+          // wyczyść poprzednią listę
+          while (intermediateInner.firstChild)
+            intermediateInner.removeChild(intermediateInner.firstChild);
+
+          const list = Array.isArray(data.intermediate) ? data.intermediate : [];
+
+          if (list.length === 0) {
+            const el = document.createElement("div");
+            el.className = "stop-item";
+            el.innerHTML = '<div class="stop-name">Brak dalszych stacji</div>';
+            intermediateInner.appendChild(el);
+          } else {
+            for (const stopName of list.slice(0, maxIntermediates)) {
+              const el = document.createElement("div");
+              el.className = "stop-item";
+
+              const name = document.createElement("div");
+              name.className = "stop-name";
+              name.textContent = stopName || "—";
+
+              el.appendChild(name);
+              intermediateInner.appendChild(el);
+            }
+          }
+
+          // animacja przewijania listy
+          requestAnimationFrame(() => {
+            const listBox = document.querySelector(".intermediate-list");
+            const inner = intermediateInner;
+            const visible = listBox.clientHeight;
+            const full = inner.scrollHeight;
+
+            inner.style.animation = "none";
+            inner.style.setProperty("--scroll-distance", "0px");
+
+            if (full > visible) {
+              const distance = full - visible;
+              inner.style.setProperty("--scroll-distance", `-${distance}px`);
+              const duration = Math.max(6, Math.min(30, Math.ceil(distance / 10))); // sekundy
+              inner.style.animation = `scrollUp ${duration}s linear infinite alternate`;
+            }
+          });
+
+        };
+
+        ws.onclose = () => {
+            setTimeout(connectWS, 5000);
+        };
+      }
+    }
+  </script>
+</body>
+</html>

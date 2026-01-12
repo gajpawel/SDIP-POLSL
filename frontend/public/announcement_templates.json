@@ -1,0 +1,48 @@
+{
+  "special": {
+    "cancelled_terminating": "Pociąg {train_type} {train_number} ze stacji \"{origin_station}\", planowy przyjazd o godzinie {arrival_time}, został dziś odwołany. Za utrudnienia przepraszamy.",
+    "cancelled_starting": "Pociąg {train_type} {train_number} do stacji \"{final_station}\", planowy odjazd o godzinie {departure_time}, został dziś odwołany. Za utrudnienia przepraszamy.",
+    "cancelled_through": "Pociąg {train_type} {train_number} ze stacji \"{origin_station}\" do stacji \"{final_station}\", planowy odjazd o godzinie {departure_time}, został dziś odwołany. Za utrudnienia przepraszamy.",
+
+    "bus_delayed_terminating": "Pociąg {train_type} {train_number} ze stacji \"{origin_station}\", planowy przyjazd o godzinie {arrival_time}, został dziś odwołany. Przewóz podróżnych realizowany jest autobusem komunikacji zastępczej z opóźnieniem około {arrival_delay} minut. Za utrudnienia przepraszamy.",
+    "bus_delayed_starting": "Pociąg {train_type} {train_number} do stacji \"{final_station}\", planowy odjazd o godzinie {departure_time}, został dziś odwołany. Przewóz podróżnych realizowany jest autobusem komunikacji zastępczej z opóźnieniem około {arrival_delay} minut. Za utrudnienia przepraszamy.",
+    "bus_delayed_through": "Pociąg {train_type} {train_number} ze stacji \"{origin_station}\" do stacji \"{final_station}\", planowy odjazd o godzinie {departure_time}, został dziś odwołany. Przewóz podróżnych realizowany jest autobusem komunikacji zastępczej z opóźnieniem około {arrival_delay} minut. Za utrudnienia przepraszamy.",
+
+    "bus_terminating": "Pociąg {train_type} {train_number} ze stacji \"{origin_station}\", planowy przyjazd o godzinie {arrival_time}, został dziś odwołany. Za pociąg zostanie uruchomiona zastępcza komunikacja autobusowa. Za utrudnienia przepraszamy.",
+    "bus_starting": "Pociąg {train_type} {train_number} do stacji \"{final_station}\", planowy odjazd o godzinie {departure_time}, został dziś odwołany. Za pociąg zostanie uruchomiona zastępcza komunikacja autobusowa. Za utrudnienia przepraszamy.",
+    "bus_through": "Pociąg {train_type} {train_number} ze stacji \"{origin_station}\" do stacji \"{final_station}\", planowy odjazd o godzinie {departure_time}, został dziś odwołany. Za pociąg zostanie uruchomiona zastępcza komunikacja autobusowa. Za utrudnienia przepraszamy.",
+
+    "delay_terminating": "Pociąg {train_type} {train_number} ze stacji \"{origin_station}\", planowy przyjazd o godzinie {arrival_time}, przyjedzie z opóźnieniem około {arrival_delay} minut. Za utrudnienia przepraszamy.",
+    "delay_through": "Pociąg {train_type} {train_number} ze stacji \"{origin_station}\" do stacji \"{final_station}\", planowy przyjazd o godzinie {arrival_time}, przyjedzie z opóźnieniem około {arrival_delay} minut. Za utrudnienia przepraszamy."
+  },
+
+  "arrival": {
+    "normal": "Pociąg {train_type} {train_number} ze stacji \"{origin_station}\" do stacji \"{final_station}\" wjedzie na tor numer {track} przy peronie numer {platform}. Prosimy zachować ostrożność i nie zbliżać się do krawędzi peronu. Planowy odjazd pociągu o godzinie {departure_time}.",
+    "changed_track": "Pociąg {train_type} {train_number} ze stacji \"{origin_station}\" do stacji \"{final_station}\" wjedzie wyjątkowo na tor numer {track} przy peronie numer {platform}. Prosimy zachować ostrożność i nie zbliżać się do krawędzi peronu. Planowy odjazd pociągu o godzinie {departure_time}. Za zmianę peronu przepraszamy.",
+    "delayed": "Opóźniony pociąg {train_type} {train_number} ze stacji \"{origin_station}\" do stacji \"{final_station}\", planowy przyjazd o godzinie {arrival_time}, wjedzie na tor numer {track} przy peronie numer {platform}. Prosimy zachować ostrożność i nie zbliżać się do krawędzi peronu. Za opóźnienie przepraszamy.",
+    "delayed_changed": "Opóźniony pociąg {train_type} {train_number} ze stacji \"{origin_station}\" do stacji \"{final_station}\", planowy przyjazd o godzinie {arrival_time}, wjedzie wyjątkowo na tor numer {track} przy peronie numer {platform}. Prosimy zachować ostrożność i nie zbliżać się do krawędzi peronu. Za opóźnienie i zmianę peronu przepraszamy.",
+    "delayed_bus": "Opóźniona zastępcza komunikacja autobusowa za pociąg {train_type} {train_number} ze stacji \"{origin_station}\" do stacji \"{final_station}\", planowy przyjazd o godzinie {arrival_time}, wjedzie na stanowisko autobusowe. Za utrudnienia przepraszamy.",
+    "bus": "Zastępcza komunikacja autobusowa za pociąg {train_type} {train_number} ze stacji \"{origin_station}\" do stacji \"{final_station}\", planowy przyjazd o godzinie {arrival_time}, wjedzie na stanowisko autobusowe. Za utrudnienia przepraszamy."
+  },
+
+  "terminating" : {
+    "delayed_bus" : "Opóźniona zastępcza komunikacja autobusowa za pociąg {train_type} {train_number} ze stacji \"{origin_station}\", planowy przyjazd o godzinie {arrival_time}, wjedzie na stanowisko autobusowe. Autobus kończy bieg. Za utrudnienia przepraszamy.",
+    "bus" : "Zastępcza komunikacja autobusowa za pociąg {train_type} {train_number} ze stacji \"{origin_station}\", planowy przyjazd o godzinie {arrival_time}, wjedzie na stanowisko autobusowe. Autobus kończy bieg. Za utrudnienia przepraszamy.",
+    "delayed_changed" : "Opóźniony pociąg {train_type} {train_number} ze stacji \"{origin_station}\" wjedzie wyjątkowo na tor numer {track} przy peronie numer {platform}. Pociąg kończy bieg. Prosimy zachować ostrożność i nie zbliżać się do krawędzi peronu. Za zmianę peronu przepraszamy.",
+    "changed_track" : "Pociąg {train_type} {train_number} ze stacji \"{origin_station}\" wjedzie wyjątkowo na tor numer {track} przy peronie numer {platform}. Pociąg kończy bieg. Prosimy zachować ostrożność i nie zbliżać się do krawędzi peronu. Za zmianę peronu przepraszamy.",
+    "delayed" : "Opóźniony pociąg {train_type} {train_number} ze stacji \"{origin_station}\" wjedzie na tor numer {track} przy peronie numer {platform}. Pociąg kończy bieg. Prosimy zachować ostrożność i nie zbliżać się do krawędzi peronu. Za opóźnienie przepraszamy.",
+    "normal" : "Pociąg {train_type} {train_number} ze stacji \"{origin_station}\" wjedzie na tor numer {track} przy peronie numer {platform}. Pociąg kończy bieg. Prosimy zachować ostrożność i nie zbliżać się do krawędzi peronu."
+  },
+
+  "standing": {
+    "train": "Pociąg {train_type} {train_number} do stacji \"{final_station}\" stoi na torze numer {track} przy peronie numer {platform}. Planowy odjazd pociągu o godzinie {departure_time}.",
+    "bus": "Zastępcza komunikacja autobusowa za pociąg {train_type} {train_number} do stacji \"{final_station}\", stoi na stanowisku autobusowym. Planowy odjazd o godzinie {departure_time}."
+  },
+
+  "departure": {
+    "normal": "Pociąg {train_type} {train_number} do stacji \"{final_station}\" odjedzie z toru numer {track} przy peronie numer {platform}. Prosimy zachować ostrożność i nie zbliżać się do krawędzi peronu.",
+    "delayed": "Opóźniony pociąg {train_type} {train_number} do stacji \"{final_station}\", planowy odjazd o godzinie {departure_time}, odjedzie z toru numer {track} przy peronie numer {platform}. Prosimy zachować ostrożność i nie zbliżać się do krawędzi peronu. Za opóźnienie przepraszamy.",
+    "bus": "Zastępcza komunikacja autobusowa za pociąg {train_type} {train_number} do stacji \"{final_station}\", planowy odjazd o godzinie {departure_time}, odjedzie ze stanowiska autobusowego.",
+    "bus_delayed": "Opóźniona zastępcza komunikacja autobusowa za pociąg {train_type} {train_number} do stacji \"{final_station}\", planowy odjazd o godzinie {departure_time}, odjedzie ze stanowiska autobusowego. Za utrudnienia przepraszamy."
+  }
+}

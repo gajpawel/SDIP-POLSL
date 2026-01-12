@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title id="title">Tablica zbiorcza</title>
+
+  <style>
+    :root {
+      --bg: #020203;
+      --accent: #00e676;
+      --muted: #86c4b3;
+      --text: #e6f7ef;
+      --danger: #ff5252;
+      --card: #08121a;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    .wrap {
+      display: flex;
+      flex-direction: column;
+      padding: 20px 30px;
+      box-sizing: border-box;
+    }
+
+    /* HEADER */
+    .header {
+      font-size: 50px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 50px;
+    }
+
+    /* TABLE */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 22px;
+    }
+
+    th {
+      text-align: left;
+      color: var(--muted);
+      font-size: 18px;
+      padding-bottom: 8px;
+    }
+
+    /* TRYB HORYZONTALNY (1600:900) */
+    body.horizontal table {
+      table-layout: fixed; /* Wymuszenie stałych szerokości */
+    }
+
+    body.horizontal th:nth-child(1) { width: auto; } /* Godzina */
+    body.horizontal th:nth-child(2) { width: 240px; } /* Pociąg */
+    body.horizontal th:nth-child(3) { width: 300px; } /* Cel */
+    body.horizontal th:nth-child(4) { width: 600px; }  /* Przez */
+    body.horizontal th:nth-child(5) { width: 125px; } /* Peron/Tor */
+
+    body.horizontal td {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    td {
+      padding: 12px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.327);
+      vertical-align: middle;
+    }
+
+    /* BRAK ZAWIJANIA W TRYBIE POZIOMYM */
+    body.horizontal td, body.horizontal th {
+      white-space: nowrap;
+    }
+
+    .time {
+      font-weight: 700;
+      font-size: 26px;
+    }
+
+    .delay {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .platform {
+      text-align: center;
+    }
+
+    .cancelled {
+      text-align: center;
+      color: var(--danger);
+    }
+
+    /* Kontener dla stacji pośrednich */
+    .intermediate {
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    /* Element wewnętrzny do animacji */
+    .scroll-content {
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    /* Animacja pozioma (lewo-prawo) */
+    .scrolling-x {
+      animation: scrollLeftRight 12s linear infinite;
+    }
+
+    @keyframes scrollLeftRight {
+      0%, 20% { transform: translateX(0); } /* Czekaj na początku */
+      50%, 70% { transform: translateX(var(--scroll-offset)); } /* Przewiń do końca i czekaj */
+      100% { transform: translateX(0); } /* Wróć na początek */
+    }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header" id="header-title">Odjazdy</div>
+    <table>
+      <thead>
+        <tr>
+          <th id="col-time">Godzina</th>
+          <th id="col-train">Pociąg</th>
+          <th id="th-station">Stacja docelowa</th>
+          <th id="col-via">Przez</th>
+          <th id="col-track">Peron/Tor</th>
+        </tr>
+      </thead>
+      <tbody id="departures"></tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    /* -----------------------------
+       PARAMETRY WYGLĄDU Z URL
+    ----------------------------- */
+    const params = new URLSearchParams(window.location.search);
+    const displayId = params.get("display_id");
+    const view = params.get("view") || "departures";
+    const orientation = params.get("orientation") || "horizontal";
+
+    // Dodanie klasy orientacji do body
+    if (orientation === "horizontal") {
+        document.body.classList.add("horizontal");
+    }
+
+    let maxIntermediates = 5;
+    let theme, stationId;
+
+    // 1. Ładowanie wyglądu
+    async function loadAppearance() {
+        try {
+            const data = await fetch(`/api/displays/display/${displayId}`).then(r => r.json());
+
+            document.getElementById("header-title").textContent =
+                (view === "arrivals") ? "Przyjazdy" : "Odjazdy";
+
+            document.getElementById("title").textContent =
+                (view === "arrivals") ? "Tablica przyjazdów" : "Tablica odjazdów";
+
+            document.getElementById("th-station").textContent =
+                (view === "arrivals") ? "Stacja początkowa" : "Stacja docelowa";
+
+            applyDisplayAppearance(data);
+            applyTheme();
+        } catch (e) {
+            console.error("Błąd pobierania wyglądu:", e);
+        }
+    }
+
+    // 2. Funkcja stosująca wygląd
+    function applyDisplayAppearance(data) {
+        document.documentElement.style.setProperty("--accent", "#" + data.main_color);
+        document.documentElement.style.setProperty("--bg", "#" + data.background_color);
+        document.body.style.fontFamily = `"${data.font}", Roboto, Arial, sans-serif`;
+        document.title = data.alias ? `Wyświetlacz: ${data.alias}` : "Tablica zbiorcza";
+
+        if (data.intermediates_number === null || data.intermediates_number === undefined) {
+            maxIntermediates = 999;
+        } else {
+            maxIntermediates = parseInt(data.intermediates_number, 10);
+        }
+
+        theme = data.theme ? 1 : 0;
+        stationId = parseInt(data.station_id);
+    }
+
+    function applyMobileStyles() {
+      const wrapElement = document.querySelector('.wrap');
+      if (wrapElement) {
+          wrapElement.style.padding = '10px 15px';
+      }
+      const headerElement = document.querySelector('.header');
+      if (headerElement) {
+          headerElement.style.fontSize = '32px'; 
+          headerElement.style.marginTop = '20px';
+          headerElement.style.marginBottom = '60px';
+      }
+      const tableElement = document.querySelector('table');
+      if (tableElement) {
+          tableElement.style.fontSize = '14px';
+          tableElement.style.tableLayout = 'fixed';
+          
+          // Ustawienie szerokości kolumn (zmniejszenie pierwszej i ostatniej)
+          const ths = tableElement.querySelectorAll('th');
+          if (ths.length >= 5) {
+              ths[0].style.width = '75px';  // Godzina
+              ths[1].style.width = 'auto';  // Pociąg
+              ths[2].style.width = 'auto';  // Stacja
+              ths[3].style.width = 'auto';  // Przez (stacje pośrednie)
+              ths[4].style.width = '85px';  // Peron/Tor
+          }
+      }
+      const thElements = document.querySelectorAll('th');
+      thElements.forEach(th => {
+          th.style.textAlign = 'center'; 
+          th.style.fontSize = '14px';
+      });
+      const tdElements = document.querySelectorAll('td');
+      tdElements.forEach(td => {
+          td.style.textAlign = 'center'; 
+          td.style.padding = '8px 4px';
+      });
+      const timeElements = document.querySelectorAll('.time');
+      timeElements.forEach(time => {
+          time.style.fontSize = '16px'; 
+          time.style.whiteSpace = 'nowrap';
+      });
+      const delayElements = document.querySelectorAll('.delay');
+      delayElements.forEach(delay => {
+          delay.style.fontSize = '12px';
+          delay.style.display = 'block';
+      });
+    }
+
+    function applyHorizontalScrollEffects() {
+        const containers = document.querySelectorAll('.intermediate');
+        containers.forEach(container => {
+            const content = container.querySelector('.scroll-content');
+            if (!content) return;
+            const overflow = content.scrollWidth - container.clientWidth;
+            if (overflow > 0) {
+                container.style.setProperty('--scroll-offset', `-${overflow}px`);
+                content.classList.add('scrolling-x');
+            } else {
+                content.classList.remove('scrolling-x');
+                container.style.removeProperty('--scroll-offset');
+            }
+        });
+    }
+
+    function applyTheme() {
+        if (theme === 1) {
+            document.documentElement.style.setProperty("--text", "#000");
+            document.documentElement.style.setProperty("--card", "#fff");
+            document.documentElement.style.setProperty("--muted", "#444");
+        } else {
+            document.documentElement.style.setProperty("--text", "#e6f7ef");
+            document.documentElement.style.setProperty("--card", "#08121a");
+            document.documentElement.style.setProperty("--muted", "#86c4b3");
+        }
+    }
+
+    await loadAppearance();
+
+    connectWsView();
+
+    function connectWsView() {
+      const wsview = new WebSocket(`/ws/displays/appearance/${displayId}`);
+      wsview.onmessage = async () => {
+          await loadAppearance();
+      };
+      wsview.onclose = () => {
+          console.log("Appearance WS closed — reconnecting in 5s...");
+          setTimeout(connectWsView, 5000);
+      };
+    }
+
+    connectWs();
+    
+    function connectWs() {
+      const ws = new WebSocket(view==="departures" ? `/ws/displays/station-display-departures-data/${stationId}` : `/ws/displays/station-display-arrivals-data/${stationId}`);
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        const tbody = document.getElementById("departures");
+        tbody.innerHTML = "";
+
+        data.forEach((t) => {
+          const tr = document.createElement("tr");
+          const delay = t.delay && t.delay > 0 ? `<span class="delay">+${t.delay}'</span>` : "";
+          const originalIntermediate = Array.isArray(t.intermediate) ? t.intermediate : [];
+          
+          let intermediateText = "";
+          if (maxIntermediates >= originalIntermediate.length) {
+              intermediateText = originalIntermediate.join(", ");
+          } else {
+              intermediateText = originalIntermediate.slice(0, maxIntermediates).join(", ");
+          }
+
+          tr.innerHTML = `
+            <td class="time">${t.time || "--:--"} ${delay}</td>
+            <td>${t.train_type || ""} ${t.train_number || ""}</td>
+            <td>${t.station || "—"}</td>
+            <td>
+              <div class="intermediate">
+                  <span class="scroll-content">${intermediateText}</span>
+              </div>
+            </td>
+            <td class="${t.is_cancelled || t.bus ? "cancelled" : "platform"}">${t.bus ? "<b>BUS</b>" : t.is_cancelled ? "<b>Odwołany</b>" : (t["platform/track"] || "")}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        if (orientation === "vertical") {
+            applyMobileStyles();
+        }
+        setTimeout(applyHorizontalScrollEffects, 50);
+      };
+      ws.onclose = () => {
+        console.log("Data WS closed — reconnecting in 5s...");
+        setTimeout(connectWs, 5000);
+      };
+    }
+  </script>
+</body>
+</html>

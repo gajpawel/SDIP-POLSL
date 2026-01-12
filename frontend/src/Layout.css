@@ -1,0 +1,138 @@
+/* --- RESET I BAZA --- */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background-color: #f7f9fb;
+}
+
+/* --- KONTENER GŁÓWNY --- */
+.layout-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* --- NAGŁÓWEK (HEADER) --- */
+.layout-header {
+  background-color: #003366;
+  color: white;
+  padding: 15px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.header-logo {
+  margin: 0;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* --- PRZYCISKI W NAGŁÓWKU --- */
+.btn-nav {
+  background-color: #34495e;
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  text-decoration: none;
+  transition: background-color 0.2s;
+  font-size: 14px;
+}
+
+.btn-nav:hover {
+  background-color: #2c3e50;
+}
+
+.btn-logout {
+  background-color: #c0392b;
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.btn-logout:hover {
+  background-color: #a93226;
+}
+
+/* --- GŁÓWNA ZAWARTOŚĆ (MAIN) --- */
+.layout-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  margin: 20px auto;
+  padding: 30px 20px;
+  background-color: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 8px;
+}
+
+/* --- STOPKA (FOOTER) --- */
+.layout-footer {
+  background-color: #003366;
+  color: white;
+  text-align: center;
+  padding: 15px 0;
+  font-size: 14px;
+  margin-top: auto;
+}
+
+/* --- RWD: STYL DLA TELEFONÓW (max 768px) --- */
+@media (max-width: 768px) {
+  .layout-header {
+    flex-direction: column; /* Układ pionowy */
+    padding: 15px 20px;
+    gap: 15px;
+    text-align: center;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap; /* Zwijanie przycisków jeśli się nie mieszczą */
+  }
+
+  .layout-main {
+    margin: 10px; /* Mniejszy margines zewnętrzny */
+    padding: 20px 15px; /* Mniejszy padding wewnętrzny */
+    border-radius: 0; /* Prostokątne rogi na mobile wyglądają lepiej */
+    box-shadow: none;
+  }
+  
+  .header-logo {
+    font-size: 18px; /* Nieco mniejsze logo */
+  }
+}
+
+/* --- GLOBALNE POPRAWKI DLA TABEL I FORMULARZY --- */
+/* Dodaj klasę 'table-wrapper' wokół tabeli w TimeTable.jsx */
+.table-wrapper {
+  overflow-x: auto; /* Pozwala przesuwać tabelę palcem w lewo/prawo */
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+/* Nadpisanie sztywnych szerokości formularzy na mobile */
+@media (max-width: 600px) {
+  input[type="text"], input[type="password"], select {
+    width: 100% !important; /* Wymuszenie pełnej szerokości na małym ekranie */
+    max-width: 100%;
+  }
+}

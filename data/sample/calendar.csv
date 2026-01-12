@@ -1,0 +1,4 @@
+monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date,service_id
+t,t,t,t,t,t,t,2025-12-14,2026-12-12,1
+f,f,f,f,f,t,t,2025-12-14,2026-12-12,2
+f,f,f,f,f,f,t,2025-12-14,2026-12-12,3

@@ -1,0 +1,38 @@
+body {
+  margin: 0;
+  background-color: #f7f9fb;
+}
+
+input, select, button {
+  font-family: inherit;
+  margin: 6px 0;
+}
+
+input, select {
+  padding: 8px;
+  width: 100%;
+  max-width: 300px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+button {
+  background-color: #0066cc;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #818589;
+}
+
+h2, h3 {
+  color: #003366;
+}
+
+h1 {
+  color: white;
+}

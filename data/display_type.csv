@@ -1,0 +1,9 @@
+id;name;picture_path
+2;Tablica peronowa wejściowa;entrance_platform_board.png
+6;Infokiosk wielofunkcyjny;multifunctional_info_kiosk.png
+1;Tablica krawędziowa;edge_board.png
+5;Tablica informacyjna - przyjazdy;information_board_departures.png
+4;Tablica informacyjna - odjazdy;information_board_arrivals.png
+3;Tablica zbiorcza peronowa;platform_collective_board.png
+8;Tablica stacyjna - przyjazdy;station_board_arrivals.png
+7;Tablica stacyjna - odjazdy;station_board_departures.png

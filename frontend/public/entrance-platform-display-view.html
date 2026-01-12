@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Wyświetlacz wejściowy peronowy – podgląd</title>
+
+
+  <style>
+    :root{
+      --bg:#020203;
+      --panel:#071018;
+      --accent:#00e676;
+      --muted:#86c4b3;
+      --danger:#ff5252;
+      --text:#e6f7ef;
+      --card:#08121a;
+    }
+
+    html,body{
+      height:100%;
+      margin:0px;
+      font-family:"Segoe UI",Roboto,Arial,sans-serif;
+      background:linear-gradient(180deg,var(--bg) 0%,#04040a 100%);
+      color:var(--text);
+    }
+
+    .wrap{
+      box-sizing:border-box;
+      width:100%;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      padding:10px;
+    }
+
+    /* ---- NOWE: LISTA 3 NAJBLIŻSZYCH POŁĄCZEŃ ---- */
+
+    .train-list{
+      display:flex;
+      flex-direction:column;
+      gap:40px;
+      margin-top:10px;
+    }
+
+    .train-card{
+      background:var(--card);
+      padding:16px;
+      border-radius:12px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.4);
+      display:flex;
+      flex-direction:column;
+      gap:60px;
+    }
+
+    .row-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+    }
+
+    .big-destination{
+      font-size:clamp(36px,3vw,32px);
+      font-weight:700;
+      color:var(--accent);
+      text-transform:uppercase;
+    }
+
+    .time-box{
+      text-align:right;
+    }
+
+    .dep-time{
+      font-size:clamp(28px,3vw,30px);
+      font-weight:700;
+    }
+
+    .delay{
+      font-weight:700;
+      color:var(--danger);
+      background:rgba(255,82,82,0.15);
+      padding:4px 8px;
+      border-radius:6px;
+      margin-top:4px;
+      display:inline-block;
+    }
+
+    .row-middle{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+
+    .track{
+      font-size:26px;
+      color:var(--accent);
+      font-weight:700;
+    }
+
+    .number{
+      font-size:30px;
+      font-weight:900;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <!-- Miejsce na 2 połączenia -->
+    <div id="trainList" class="train-list"></div>
+
+  </div>
+  <script type="module">
+    /* -----------------------------
+       PARAMETRY WYGLĄDU Z URL
+    ----------------------------- */
+    // 1. Pobieramy tylko display_id z URL
+    const params = new URLSearchParams(window.location.search);
+    const displayId = params.get("display_id");
+
+    let theme, platformId;
+
+    // 1. Ładowanie wyglądu
+    async function loadAppearance() {
+        const data = await fetch(`/api/displays/display/${displayId}`).then(r => r.json());
+
+        applyDisplayAppearance(data);
+        applyTheme();
+    }
+
+    // 2. Funkcja stosująca wygląd
+    function applyDisplayAppearance(data) {
+        document.documentElement.style.setProperty("--accent", "#" + data.main_color);
+        document.documentElement.style.setProperty("--bg", "#" + data.background_color);
+        document.body.style.fontFamily = `"${data.font}", Roboto, Arial, sans-serif`;
+        document.title = data.alias ? `Wyświetlacz: ${data.alias}` : "Wyświetlacz wejściowy peronowy - podgląd";
+
+        // theme jest boolean – konwertujemy poprawnie:
+        theme = data.theme ? 1 : 0;
+
+        platformId = parseInt(data.platform_id);
+    }
+
+    // 3. Osobna funkcja ustawiająca jasny/ciemny motyw
+    function applyTheme() {
+        if (theme === 1) {
+            // JASNY
+            document.documentElement.style.setProperty("--text", "#000");
+            document.documentElement.style.setProperty("--card", "#fff");
+            document.documentElement.style.setProperty("--muted", "#444");
+        }
+        else {
+            // CIEMNY
+            document.documentElement.style.setProperty("--text", "#e6f7ef");
+            document.documentElement.style.setProperty("--card", "#08121a");
+            document.documentElement.style.setProperty("--muted", "#86c4b3");
+        }
+    }
+
+    // 4. Start – czekamy aż wygląd się załaduje
+    await loadAppearance();
+
+    connectAppearanceWS();
+
+    function connectAppearanceWS() {
+      // 5. WebSocket aktualizujący wygląd w locie
+      const wsview = new WebSocket(`/ws/displays/appearance/${displayId}`);
+
+      wsview.onmessage = async () => {
+          console.log("Appearance updated — refreshing...");
+          await loadAppearance();
+      };
+
+      wsview.onclose = () => {
+          console.log("Appearance WS closed — reconnecting in 5s...");
+          setTimeout(connectAppearanceWS, 5000);
+      };
+    }
+
+    /* -----------------------------
+       WEBSOCKET – ODBIÓR DANYCH
+    ----------------------------- */
+  connectWS();
+
+  function connectWS() {
+    if (!platformId) {
+      document.getElementById("trainList").innerHTML =
+        "<p style='color:red'>Brak ID peronu.</p>";
+    } else {
+      const ws = new WebSocket(`/ws/displays/entrance-platform-display-data/${platformId}`);
+
+      ws.onmessage = (event) => {
+        let arr;
+        try {
+          arr = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+
+        if (!Array.isArray(arr)) return;
+
+        const container = document.getElementById("trainList");
+        container.innerHTML = ""; 
+
+        arr.forEach((t) => {
+          const div = document.createElement("div");
+          div.className = "train-card";
+
+          const delayHtml = t.departure_delay
+            ? `<div class="delay">+${t.departure_delay} min</div>`
+            : "";
+
+
+
+          div.innerHTML = `
+            <div class="row-top">
+              <div class="big-destination">${t.station || "—"}</div>
+              <div class="time-box">
+                <div class="dep-time">${t.departure_time || "--:--"}</div>
+                ${delayHtml}
+              </div>
+            </div>
+
+            <div class="row-middle">
+              <div class="track">${"Tor " + t.track || ""}</div>
+              <div class="number">${t.train_type + " " + t.train_number || ""}</div>
+            </div>
+          `;
+
+          container.appendChild(div);
+        });
+      };
+      ws.onclose = () => {
+        console.log("Data WS closed — reconnecting in 5s...");
+        setTimeout(connectWS, 5000);
+      };
+    }
+  }
+</script>
+
+</body>
+</html>

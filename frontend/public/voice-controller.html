@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Kontroler Głosowy - System Zapowiedzi</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .status-box {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            border: 1px solid #444;
+        }
+        h1 { color: #00e676; margin-top: 0; }
+        .current-text {
+            font-size: 18px;
+            font-style: italic;
+            color: #86c4b3;
+            min-height: 80px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .queue-list {
+            text-align: left;
+            font-size: 12px;
+            color: #888;
+            max-height: 150px;
+            overflow-y: auto;
+            background: #111;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .indicator {
+            display: inline-block;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: red;
+            margin-right: 5px;
+            transition: background 0.3s ease;
+        }
+        .active { background: #00e676; box-shadow: 0 0 10px #00e676; }
+        .clock { font-size: 32px; font-weight: bold; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="clock" id="clock">00:00:00</div>
+
+    <div class="status-box">
+        <h3>Status Systemu</h3>
+        <div style="display:flex; flex-direction: column; gap: 8px; align-items: flex-start; padding-left: 25%; margin-bottom: 15px;">
+            <div><div id="ind-templates" class="indicator"></div> Szablony JSON</div>
+            <div><div id="ind-data" class="indicator"></div> WebSocket Dane (Snapshot)</div>
+            <div><div id="ind-updates" class="indicator"></div> WebSocket Zmiany (Realtime)</div>
+        </div>
+        <div class="current-text" id="current-msg">Inicjalizacja systemu...</div>
+        <div id="status-text" style="font-size: 12px; font-weight: bold; text-transform: uppercase;">Oczekiwanie...</div>
+    </div>
+
+    <div class="status-box">
+        <h4>Kolejka odtwarzania (<span id="queue-count">0</span>)</h4>
+        <div class="queue-list" id="queue-list"></div>
+    </div>
+
+    <div class="status-box">
+        <h4>Logi systemowe</h4>
+        <div class="queue-list" id="system-logs" style="font-family: monospace; font-size: 10px; color: #666;"></div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const stationId = params.get("station_id") || 1;
+        
+        let templates = null;
+        let trains = [];
+        let audioQueue = [];
+        let isPlaying = false;
+        
+        // --- MECHANIZM FILTROWANIA (SLIDING WINDOW) ---
+        const handledEvents = new Set(); 
+        const MAX_HANDLED_CAPACITY = 60; // Limit pamięci dla kluczy komunikatów
+
+        /**
+         * Dodaje klucz do zbioru obsłużonych i dba o to, by zbiór nie rósł w nieskończoność.
+         * Jeśli przekroczono limit, usuwa najstarszy wpis (FIFO).
+         */
+        function markAsHandled(eventKey) {
+            handledEvents.add(eventKey);
+            if (handledEvents.size > MAX_HANDLED_CAPACITY) {
+                // Set.values().next().value zwraca najwcześniej dodany element
+                const oldestKey = handledEvents.values().next().value;
+                handledEvents.delete(oldestKey);
+            }
+        }
+
+        async function init() {
+            try {
+                log("Pobieranie szablonów komunikatów...");
+                const response = await fetch('announcement_templates.json');
+                if (!response.ok) throw new Error("Plik JSON nie został znaleziony");
+                
+                templates = await response.json();
+                document.getElementById('ind-templates').classList.add('active');
+                document.getElementById('current-msg').innerText = "-- Gotowość do pracy --";
+                
+                connectDataWS();
+                connectSpecialWS();
+            } catch (err) {
+                document.getElementById('current-msg').innerText = "BŁĄD KRYTYCZNY: Brak szablonów JSON!";
+                log("Błąd inicjalizacji: " + err.message, "error");
+            }
+        }
+
+        function getMessage(category, key, train) {
+            if (!templates || !templates[category] || !templates[category][key]) {
+                console.warn(`Brak szablonu: ${category}.${key}`);
+                return "";
+            }
+
+            const rawTemplate = templates[category][key];
+            const data = {
+                train_type: train.train_type || "",
+                train_number: train.train_number || "",
+                origin_station: train.origin_station || "",
+                final_station: train.final_station || "",
+                arrival_time: timeToPolishWords(train.arrival_time),
+                departure_time: timeToPolishWords(train.departure_time),
+                arrival_delay: train.arrival_delay || 0,
+                departure_delay: train.departure_delay || 0,
+                track: train.track || "",
+                platform: train.platform || ""
+            };
+
+            return rawTemplate.replace(/{(\w+)}/g, (match, pKey) => {
+                return data[pKey] !== undefined ? data[pKey] : match;
+            });
+        }
+
+        function log(msg, type = "info") {
+            const logs = document.getElementById('system-logs');
+            const entry = document.createElement('div');
+            entry.style.color = type === "error" ? "#ff5252" : "#666";
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logs.prepend(entry);
+        }
+
+        function getMinutesFromMidnight(timeStr, delayMinutes = 0) {
+            if (!timeStr) return null;
+            const [h, m] = timeStr.split(':').map(Number);
+            let total = h * 60 + m + (delayMinutes || 0);
+            return total % 1440;
+        }
+
+        function timeToPolishWords(timeStr) {
+            if (!timeStr) return "";
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            const hoursOrdinal = ["zerowej", "pierwszej", "drugiej", "trzeciej", "czwartej", "piątej", "szóstej", "siódmej", "ósmej", "dziewiątej", "dziesiątej", "jedenastej", "dwunastej", "trzynastej", "czternastej", "piętnastej", "szesnastej", "siedemnastej", "osiemnastej", "dziewiętnastej", "dwudziestej", "dwudziestej pierwszej", "dwudziestej drugiej", "dwudziestej trzeciej"];
+            const ones = ["", "jeden", "dwa", "trzy", "cztery", "pięć", "sześć", "siedem", "osiem", "dziewięć"];
+            const teens = ["dziesięć", "jedenaście", "dwanaście", "trzynaście", "czternaście", "piętnaście", "szesnaście", "siedemnaście", "osiemnaście", "dziewiętnaście"];
+            const tens = ["", "", "dwadzieścia", "trzydzieści", "czterdzieści", "pięćdziesiąt"];
+
+            function convertMinutes(m) {
+                if (m === 0) return "zero zero";
+                if (m < 10) return "zero " + ones[m];
+                if (m < 20) return teens[m - 10];
+                return (tens[Math.floor(m / 10)] + " " + ones[m % 10]).trim();
+            }
+
+            return `${hoursOrdinal[hours]} ${convertMinutes(minutes)}`.trim();
+        }
+
+        function connectDataWS() {
+            const ws = new WebSocket(`ws://${window.location.host}/ws/voice-data/${stationId}`); 
+            ws.onopen = () => {
+                log("Połączono z WS danych");
+                document.getElementById('ind-data').classList.add('active');
+            };
+            ws.onmessage = (e) => { trains = JSON.parse(e.data); };
+            ws.onclose = () => {
+                document.getElementById('ind-data').classList.remove('active');
+                setTimeout(connectDataWS, 5000);
+            };
+        }
+
+        function connectSpecialWS() {
+            const ws = new WebSocket(`ws://${window.location.host}/ws/voice-timetable-edit/${stationId}`); 
+            ws.onopen = () => {
+                log("Połączono z WS zmian (realtime)");
+                document.getElementById('ind-updates').classList.add('active');
+            };
+            ws.onmessage = (e) => { special_trigger(JSON.parse(e.data)); };
+            ws.onclose = () => {
+                document.getElementById('ind-updates').classList.remove('active');
+                setTimeout(connectSpecialWS, 5000);
+            };
+        }
+
+        // --- 5. LOGIKA KOMUNIKATÓW ---
+        function special_trigger(train) {
+            const stateKey = train.is_cancelled ? "cancelled" : `delay_${train.arrival_delay}`;
+            
+            // Klucz unikalny dla odczytu NATYCHMIASTOWEGO (bez daty, limit pojemności chroni przed duplikacją pociągów o tej samej porze jutro)
+            const eventKey = `${train.id}_special_${stateKey}_now`; 
+
+            if (!handledEvents.has(eventKey)) {
+                markAsHandled(eventKey);
+                
+                let category = "special";
+                let key = "";
+
+                if (train.is_cancelled) {
+                    if (!train.departure_time) key = "cancelled_terminating";
+                    else if (!train.arrival_time) key = "cancelled_starting";
+                    else key = "cancelled_through";
+                } 
+                else if (train.bus === true) {
+                    const prefix = train.arrival_delay >= 5 ? "bus_delayed" : "bus";
+                    if (!train.departure_time) key = `${prefix}_terminating`;
+                    else if (!train.arrival_time) key = `${prefix}_starting`;
+                    else key = `${prefix}_through`;
+                }
+                else if (train.arrival_delay >= 5) {
+                    key = !train.departure_time ? "delay_terminating" : "delay_through";
+                }
+
+                if (key) {
+                    addToQueue(getMessage(category, key, train));
+                    log(`Wyzwalacz: Realtime - Odczyt natychmiastowy (${train.train_number})`);
+                }
+            }
+        }
+
+        function checkTriggers(now) {
+            if(!trains.length || !templates) return;
+            
+            const currentHm = now.getHours() * 60 + now.getMinutes(); 
+
+            trains.forEach(t => {
+                // Czasy rzeczywiste (uwzględniające opóźnienie)
+                const realArrMin = getMinutesFromMidnight(t.arrival_time, t.arrival_delay);
+                const realDepMin = getMinutesFromMidnight(t.departure_time, t.departure_delay);
+                
+                // Czas pierwotny (planowy)
+                const planArrMin = getMinutesFromMidnight(t.arrival_time, 0);
+
+                const minsToRealArrival = realArrMin !== null ? realArrMin - currentHm : null;
+                const minsToRealDeparture = realDepMin !== null ? realDepMin - currentHm : null;
+                const minsToPlanArrival = planArrMin !== null ? planArrMin - currentHm : null;
+
+                const isBus = t.bus === "True" || t.bus === true;
+                const isDelayed = t.arrival_delay >= 5;
+                const isTrackChanged = t.changed_track === "True" || t.changed_track === true;
+                const isCancelled = t.is_cancelled === "True" || t.is_cancelled === true;
+
+                // --- LOGIKA PODWÓJNEGO ODCZYTU (Przypomnienie 10 min przed planem) ---
+                if (minsToPlanArrival === 10 && (isDelayed || isCancelled || isBus)) {
+                    const stateKey = isCancelled ? "cancelled" : `delay_${t.arrival_delay}`;
+                    const eventKey = `${t.id}_special_${stateKey}_10min`;
+
+                    if (!handledEvents.has(eventKey)) {
+                        markAsHandled(eventKey);
+                        
+                        let category = "special";
+                        let key = "";
+
+                        if (isCancelled) {
+                            if (!t.departure_time) key = "cancelled_terminating";
+                            else if (!t.arrival_time) key = "cancelled_starting";
+                            else key = "cancelled_through";
+                        } 
+                        else if (isBus) {
+                            const prefix = t.arrival_delay >= 5 ? "bus_delayed" : "bus";
+                            if (!t.departure_time) key = `${prefix}_terminating`;
+                            else if (!t.arrival_time) key = `${prefix}_starting`;
+                            else key = `${prefix}_through`;
+                        }
+                        else if (isDelayed) {
+                            key = !t.departure_time ? "delay_terminating" : "delay_through";
+                        }
+
+                        if (key) {
+                            addToQueue(getMessage(category, key, t));
+                            log(`Wyzwalacz: Przypomnienie 10 min przed planem (${t.train_number})`);
+                        }
+                    }
+                }
+
+                // --- KOMUNIKATY STANDARDOWE ---
+
+                // WJAZD
+                if (minsToRealArrival === 3 && t.departure_time) {
+                    const eventKey = `${t.id}_arrival`;
+                    if (!handledEvents.has(eventKey)) {
+                        markAsHandled(eventKey);
+                        let key = isBus ? (isDelayed ? "delayed_bus" : "bus") : 
+                                  (isDelayed ? (isTrackChanged ? "delayed_changed" : "delayed") : 
+                                  (isTrackChanged ? "changed_track" : "normal"));
+                        addToQueue(getMessage("arrival", key, t));
+                    }
+                }
+
+                // KOŃCZENIE BIEGU
+                if (t.departure_time === null && minsToRealArrival === 3) {
+                    const eventKey = `${t.id}_terminating_3min`;
+                    if (!handledEvents.has(eventKey)) {
+                        markAsHandled(eventKey);
+                        let key = isBus ? (isDelayed ? "delayed_bus" : "bus") : 
+                                  (isDelayed ? (isTrackChanged ? "delayed_changed" : "delayed") : 
+                                  (isTrackChanged ? "changed_track" : "normal"));
+                        addToQueue(getMessage("terminating", key, t));
+                    }
+                }
+
+                // POSTÓJ
+                if (currentHm === realArrMin && t.stop_duration > 4) {
+                    const eventKey = `${t.id}_standing`;
+                    if (!handledEvents.has(eventKey)) {
+                        markAsHandled(eventKey);
+                        addToQueue(getMessage("standing", isBus ? "bus" : "train", t));
+                    }
+                }
+
+                // ODJAZD
+                const isShort = t.stop_duration <= 4;
+                const triggerTime = isShort ? realArrMin : (realDepMin - 2);
+                
+                if (t.departure_time && currentHm === triggerTime) {
+                    const eventKey = `${t.id}_departure_vocal`;
+                    if (!handledEvents.has(eventKey)) {
+                        markAsHandled(eventKey);
+                        const isDepDelayed = t.departure_delay >= 5;
+                        let key = isBus ? (isDepDelayed ? "bus_delayed" : "bus") : 
+                                  (isDepDelayed ? "delayed" : "normal");
+                        addToQueue(getMessage("departure", key, t));
+                    }
+                }
+            });
+        }
+
+        function addToQueue(text) {
+            if (!text || text.length < 5) return; 
+            audioQueue.push(text);
+            updateQueueUI();
+            if (!isPlaying) processQueue();
+        }
+
+        function updateQueueUI() {
+            const list = document.getElementById('queue-list');
+            document.getElementById('queue-count').innerText = audioQueue.length;
+            list.innerHTML = audioQueue.map((t, i) => `<div>${i+1}. ${t.substring(0, 60)}...</div>`).join('');
+        }
+
+        async function processQueue() {
+            if (isPlaying || audioQueue.length === 0) return;
+            isPlaying = true;
+            const textToSpeak = audioQueue.shift(); 
+            updateQueueUI();
+
+            const statusText = document.getElementById('status-text');
+            statusText.innerText = "Odtwarzanie...";
+            statusText.style.color = "#00e676";
+            document.getElementById('current-msg').innerText = textToSpeak;
+
+            try {
+                const response = await fetch(`/api/speak/${stationId}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: textToSpeak })
+                });
+
+                if (!response.ok) throw new Error("Błąd API TTS");
+                const blob = await response.blob();
+                const audio = new Audio(URL.createObjectURL(blob));
+
+                audio.onended = () => {
+                    isPlaying = false;
+                    statusText.innerText = "Oczekiwanie...";
+                    statusText.style.color = "#fff";
+                    document.getElementById('current-msg').innerText = "-- Gotowość --";
+                    processQueue(); 
+                };
+                await audio.play();
+            } catch (e) {
+                log("Błąd TTS: " + e.message, "error");
+                isPlaying = false;
+                setTimeout(processQueue, 3000);
+            }
+        }
+
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('pl-PL');
+            checkTriggers(now);
+        }, 1000);
+
+        init();
+    </script>
+</body>
+</html>
