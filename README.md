@@ -17,8 +17,8 @@ Przed przystąpieniem do instalacji upewnij się, że na Twoim urządzeniu zains
 
 Sklonuj repozytorium na dysk lokalny:
 
-git clone \[https://github.com/gajpawel/SDIP\](https://github.com/gajpawel/SDIP)  
-cd SDIP
+git clone \[https://github.com/gajpawel/SDIP-POLSL\](https://github.com/gajpawel/SDIP-POLSL)  
+cd SDIP-POLSL
 
 ### **2\. Konfiguracja Backend (Serwer)**
 
