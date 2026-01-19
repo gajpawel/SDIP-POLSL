@@ -145,9 +145,7 @@
   </div>
 
   <script type="module">
-    /* -----------------------------
-       PARAMETRY WYGLĄDU Z URL
-    ----------------------------- */
+    // ID wyświetlacza z parametru URL
     const params = new URLSearchParams(window.location.search);
     const displayId = params.get("display_id");
     const view = params.get("view") || "departures";
@@ -161,7 +159,7 @@
     let maxIntermediates = 5;
     let theme, stationId;
 
-    // 1. Ładowanie wyglądu
+    // Ładowanie wyglądu
     async function loadAppearance() {
         try {
             const data = await fetch(`/api/displays/display/${displayId}`).then(r => r.json());
@@ -182,7 +180,7 @@
         }
     }
 
-    // 2. Funkcja stosująca wygląd
+    // Funkcja stosująca wygląd
     function applyDisplayAppearance(data) {
         document.documentElement.style.setProperty("--accent", "#" + data.main_color);
         document.documentElement.style.setProperty("--bg", "#" + data.background_color);

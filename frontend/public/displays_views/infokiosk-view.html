@@ -191,7 +191,6 @@
   </div>
 
   <script>
-    // 1. INICJALIZACJA ZMIENNYCH (Musi być na górze)
     const params = new URLSearchParams(window.location.search);
     const displayId = params.get("display_id") || "1"; 
     const ITEMS_PER_PAGE = 10;
@@ -205,7 +204,7 @@
     let currentView = "departures"; // departures | arrivals
     let appearanceSocket = null;
 
-    // 2. FUNKCJE WYGLĄDU (API + WebSocket)
+    // Ładowanie wyglądu
     async function loadAppearance() {
         try {
             const response = await fetch(`/api/displays/display/${displayId}`);
@@ -246,6 +245,7 @@
         }
     }
 
+    // Funkcja ustawiająca jasny/ciemny motyw
     function applyTheme() {
         if (theme === 1) { // Jasny
             document.documentElement.style.setProperty("--text", "#000");
@@ -258,6 +258,7 @@
         }
     }
 
+    // WebSocket wyglądu z automatycznym ponownym łączeniem
     function setupAppearanceWS() {
         if (appearanceSocket) appearanceSocket.close();
         
@@ -277,12 +278,9 @@
         };
     }
 
-    // 3. FUNKCJE DANYCH ROZKŁADU (Metoda GET zamiast WS)
+    // Funkcja pobierająca rozkład jazdy (HTTP GET)
     async function fetchSchedule() {
-        // Używamy endpointów HTTP API zamiast WS
-        // Zakładam, że endpointy zwracają taką samą strukturę JSON jak wcześniej WS
         const typeStr = currentView === "departures" ? "departures" : "arrivals";
-        // UWAGA: Endpoint musi istnieć w backendzie (np. /api/displays/infokiosk-departures-data/ID)
         const url = `/api/displays/infokiosk-${typeStr}-data/${stationId}`; 
 
         console.log(`Pobieranie danych z: ${url}`);
@@ -302,7 +300,6 @@
             renderList();
         } catch (err) {
             console.error("Błąd pobierania rozkładu:", err);
-            // Opcjonalnie: pokaż komunikat błędu na ekranie
         }
     }
 
@@ -377,7 +374,7 @@
         });
     }
 
-    // 4. NAWIGACJA
+    // Nawigacja listy
     window.scrollList = (direction) => {
         const newOffset = currentOffset + (direction * ITEMS_PER_PAGE);
 
@@ -415,7 +412,7 @@
         fetchSchedule();
     };
 
-    // OBSŁUGA KLAWIATURY (NOWOŚĆ)
+    // Sterowanie klawiaturą
     document.addEventListener("keydown", (e) => {
         if (e.code === "Space") {
             e.preventDefault(); // Zapobiega przewijaniu strony
@@ -427,12 +424,12 @@
         }
     });
 
-    // START APLIKACJI
+    // Start aplikacji
     (async () => {
-        // Najpierw pobierz wygląd (to ustawi stationId)
+        // Pobierz wygląd
         await loadAppearance();
         
-        // Uruchom nasłuchiwanie zmian wyglądu (to zostaje na WS zgodnie z prośbą)
+        // Uruchom nasłuchiwanie zmian wyglądu
         setupAppearanceWS();
 
         // Pobierz dane rozkładu (HTTP GET)

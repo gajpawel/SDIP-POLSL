@@ -203,7 +203,6 @@
     /* -----------------------------
        PARAMETRY WYGLĄDU Z URL
     ----------------------------- */
-    // 1. Pobieramy tylko display_id z URL
     const params = new URLSearchParams(window.location.search);
     const displayId = params.get("display_id");
 
@@ -217,22 +216,26 @@
         applyTheme();
     }
 
-    // 2. Funkcja stosująca wygląd
+    // Funkcja stosująca wygląd
     function applyDisplayAppearance(data) {
         document.documentElement.style.setProperty("--accent", "#" + data.main_color);
         document.documentElement.style.setProperty("--bg", "#" + data.background_color);
         document.body.style.fontFamily = `"${data.font}", Roboto, Arial, sans-serif`;
         document.title = data.alias ? `Wyświetlacz: ${data.alias}` : "Wyświetlacz krawędziowy - podgląd";
 
-        maxIntermediates = parseInt(data.intermediates_number || 5, 10);
+        // Jeśli intermediates_number jest null, pokazujemy wszystkie (limit 999)
+        if (data.intermediates_number === null || data.intermediates_number === undefined) {
+            maxIntermediates = 999;
+        } else {
+            maxIntermediates = parseInt(data.intermediates_number, 10);
+        }
 
-        // theme jest boolean – konwertujemy poprawnie:
         theme = data.theme ? 1 : 0;
 
         trackId = parseInt(data.track_id);
     }
 
-    // 3. Osobna funkcja ustawiająca jasny/ciemny motyw
+    // Funkcja ustawiająca jasny/ciemny motyw
     function applyTheme() {
         if (theme === 1) {
             // JASNY
@@ -248,12 +251,12 @@
         }
     }
 
-    // 4. Start – czekamy aż wygląd się załaduje
+    // Start – czekamy aż wygląd się załaduje
     await loadAppearance();
 
     connectAppearanceWS();
   
-    // 5. WebSocket aktualizujący wygląd w locie
+    // WebSocket aktualizujący wygląd w locie
     function connectAppearanceWS() {
       const wsview = new WebSocket(`/ws/displays/appearance/${displayId}`);
 
@@ -268,9 +271,7 @@
     }
 
     connectWS();
-    /* -----------------------------
-       WEBSOCKET – ODBIÓR DANYCH
-    ----------------------------- */
+    // WebSocket z danymi
     function connectWS() {
       if (!trackId) {
         document.getElementById("station").textContent = "Brak ID toru.";

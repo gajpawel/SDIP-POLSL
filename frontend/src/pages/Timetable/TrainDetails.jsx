@@ -35,36 +35,37 @@ export default function TrainDetails() {
             <p><strong>Przewoźnik:</strong> {trainDetails.carrier}</p>
             <p><strong>Stacja docelowa:</strong> {trainDetails.final_station}</p>
             <p><strong>Trasa:</strong></p>
-            <table style={{ borderCollapse: "collapse", width: "100%" }}>
-                <thead>
-                    <tr>
-                        <th style={thStyle}>Stacja</th>
-                        <th style={thStyle}>Przyjazd</th>
-                        <th style={thStyle}>Odjazd</th>
-                        <th style={thStyle}>Peron/Tor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {trainDetails.stops.map((stop) => (
-                        <tr key={stop.id} style={{ textAlign: "center" }}>
-                            <td style={tdStyle}>{stop.station} <b>{stop.is_cancelled ? "POSTÓJ ODWOŁANY" : ""}</b></td>
-                            <td style={tdStyle}>
-                                {stop.arrival_time || "-"}{" "}
-                                <b>{typeof stop.arrival_delay === "number" && stop.arrival_delay > 0 ? `+${stop.arrival_delay}` : ""}</b>
-                            </td>
-
-                            <td style={tdStyle}>
-                                {stop.departure_time || "-"}{" "}
-                                <b>{typeof stop.departure_delay === "number" && stop.departure_delay > 0 ? `+${stop.departure_delay}` : ""}</b>
-                            </td>
-                            {stop.bus===true ? <td style={tdStyle}><b>BUS</b></td> : stop.original===false ? 
-                            <td style={tdStyle}><b>{stop.platform || "-"}/{stop.track || "-"}</b></td> :
-                            <td style={tdStyle}>{stop.platform || "-"}/{stop.track || "-"}</td>}
+            <div className="table-wrapper">
+                <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                    <thead>
+                        <tr>
+                            <th style={thStyle}>Stacja</th>
+                            <th style={thStyle}>Przyjazd</th>
+                            <th style={thStyle}>Odjazd</th>
+                            <th style={thStyle}>Peron/Tor</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {trainDetails.stops.map((stop) => (
+                            <tr key={stop.id} style={{ textAlign: "center" }}>
+                                <td style={tdStyle}>{stop.station} <b>{stop.is_cancelled ? "POSTÓJ ODWOŁANY" : ""}</b></td>
+                                <td style={tdStyle}>
+                                    {stop.arrival_time || "-"}{" "}
+                                    <b>{typeof stop.arrival_delay === "number" && stop.arrival_delay > 0 ? `+${stop.arrival_delay}` : ""}</b>
+                                </td>
 
+                                <td style={tdStyle}>
+                                    {stop.departure_time || "-"}{" "}
+                                    <b>{typeof stop.departure_delay === "number" && stop.departure_delay > 0 ? `+${stop.departure_delay}` : ""}</b>
+                                </td>
+                                {stop.bus===true ? <td style={tdStyle}><b>BUS</b></td> : stop.original===false ? 
+                                <td style={tdStyle}><b>{stop.platform || "-"}/{stop.track || "-"}</b></td> :
+                                <td style={tdStyle}>{stop.platform || "-"}/{stop.track || "-"}</td>}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

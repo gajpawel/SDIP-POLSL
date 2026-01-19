@@ -12,7 +12,7 @@ export default function EditTrain() {
   useEffect(() => {
     const fetchStopDetails = async () => {
       try {
-        const res = await fetch(`/api/timetable/stop/${id}`);
+        const res = await fetch(`/api/stop/${id}`);
         if (!res.ok) throw new Error("Nie udało się pobrać szczegółów postoju.");
         const data = await res.json();
         setStopDetails(data);
@@ -27,7 +27,7 @@ export default function EditTrain() {
   useEffect(() => {
     const fetchSelectData = async () => {
       try {
-        const res = await fetch(`/api/timetable/tracks/${id}`);
+        const res = await fetch(`/api/tracks/${id}`);
         if (!res.ok) throw new Error("Błąd podczas pobierania listy torów.");
         const data = await res.json();
         setTracks(data);
@@ -81,7 +81,7 @@ export default function EditTrain() {
     };
 
     try {
-      const res = await fetch(`/api/timetable/edit/${id}`, {
+      const res = await fetch(`/api/edit-stop/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

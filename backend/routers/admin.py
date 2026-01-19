@@ -43,7 +43,6 @@ def edit_admin(admin_id: int, data: schemas.AdminUpdate, db: Session = Depends(d
     if data.password or data.password_repeat:
         if data.password != data.password_repeat:
             raise HTTPException(status_code=400, detail="Hasła nie są identyczne")
-        # Hasło (na razie bez haszowania, jak chciałeś)
         admin.password = password_hash.hash(data.password)
 
     # Aktualizacja pozostałych pól
@@ -86,7 +85,7 @@ def get_admins(db: Session = Depends(database.get_db)):
 
 @router.get("/admin/{admin_id}")
 def get_admin(admin_id: int, db: Session = Depends(database.get_db)):
-    admin = db.query(models.Administrator).join(models.Station).filter(models.Administrator.id == admin_id).first()
+    admin = db.query(models.Administrator).outerjoin(models.Station).filter(models.Administrator.id == admin_id).first()
     if not admin:
         raise HTTPException(status_code=404, detail="Administrator nie znaleziony")
     return {
@@ -95,7 +94,7 @@ def get_admin(admin_id: int, db: Session = Depends(database.get_db)):
         "name": admin.name,
         "surname": admin.surname,
         "role_id": admin.role_id,
-        "station_id": admin.station_id,
+        "station_id": admin.station_id if admin.station_id else None,
         "station": admin.station.name if admin.station else None
     }
 

@@ -101,8 +101,7 @@
         function markAsHandled(eventKey) {
             handledEvents.add(eventKey);
             if (handledEvents.size > MAX_HANDLED_CAPACITY) {
-                // Set.values().next().value zwraca najwcześniej dodany element
-                const oldestKey = handledEvents.values().next().value;
+                const oldestKey = handledEvents.values().next().value; // Najwcześniej dodany klucz
                 handledEvents.delete(oldestKey);
             }
         }
@@ -209,11 +208,11 @@
             };
         }
 
-        // --- 5. LOGIKA KOMUNIKATÓW ---
+        // Logika wyzwalaczy specjalnych (odczyt natychmiastowy)
         function special_trigger(train) {
             const stateKey = train.is_cancelled ? "cancelled" : `delay_${train.arrival_delay}`;
             
-            // Klucz unikalny dla odczytu NATYCHMIASTOWEGO (bez daty, limit pojemności chroni przed duplikacją pociągów o tej samej porze jutro)
+            // Klucz unikalny dla odczytu NATYCHMIASTOWEGO
             const eventKey = `${train.id}_special_${stateKey}_now`; 
 
             if (!handledEvents.has(eventKey)) {
@@ -244,6 +243,7 @@
             }
         }
 
+        // Sprawdzanie wyzwalaczy co minutę
         function checkTriggers(now) {
             if(!trains.length || !templates) return;
             

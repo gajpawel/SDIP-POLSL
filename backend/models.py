@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Interval, Float, Boolean, Date
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Date
 from sqlalchemy.orm import relationship
 from .database import Base
-from datetime import datetime, date
+from datetime import date
 
 class Administrator(Base):
     __tablename__ = "administrator"

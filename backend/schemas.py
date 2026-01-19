@@ -25,12 +25,14 @@ class AdminUpdate(BaseModel):
     role_id: int | None = None
     station_id: int | None = None
 
+# Schemat do edycji ustawień głosu
 class VoiceSettingsEdit(BaseModel):
     stability: int | None = None
     similarity: int | None = None
     style: int | None = None
     model_id: str | None = None
 
+# Model do dodawania nowego wyświetlacza
 class NewDisplay(BaseModel):
     station_id: int
     alias: str | None = None
@@ -43,6 +45,7 @@ class NewDisplay(BaseModel):
     background_color: str | None = None
     theme: bool | None = None
 
+# Model do edycji wyświetlacza
 class DisplayUpdate(BaseModel):
     station_id: int | None = None
     alias: str | None = None
@@ -55,9 +58,15 @@ class DisplayUpdate(BaseModel):
     background_color: str | None = None
     theme: bool | None = None
 
+# Model do aktualizacji statusu postoju
 class StopStatusUpdate(BaseModel):
     track_id: int | None = None
     bus: bool | None = None
     is_cancelled: bool | None = None
     arrival_delay: int | None = None
     departure_delay: int | None = None
+
+# Model do żądania syntezy mowy
+class SpeakRequest(BaseModel):
+    text: str
+    voice_id: str = "JBFqnCBsd6RMkjVDRZzb" # Domyślny głos (George)

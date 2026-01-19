@@ -147,16 +147,14 @@
   </div>
 
   <script type="module">
-    /* -----------------------------
-       PARAMETRY WYGLĄDU Z URL
-    ----------------------------- */
+    // ID wyświetlacza z parametru URL
     const params = new URLSearchParams(window.location.search);
     const displayId = params.get("display_id");
 
     let maxIntermediates = 5;
     let theme, platformId;
 
-    // 1. Ładowanie wyglądu
+    // Ładowanie wyglądu
     async function loadAppearance() {
         try {
             const data = await fetch(`/api/displays/display/${displayId}`).then(r => r.json());
@@ -167,7 +165,7 @@
         }
     }
 
-    // 2. Funkcja stosująca wygląd
+    // Funkcja stosująca wygląd
     function applyDisplayAppearance(data) {
         document.documentElement.style.setProperty("--accent", "#" + data.main_color);
         document.documentElement.style.setProperty("--bg", "#" + data.background_color);
@@ -185,7 +183,7 @@
         platformId = parseInt(data.platform_id);
     }
 
-    // 3. Osobna funkcja ustawiająca jasny/ciemny motyw
+    // Funkcja ustawiająca jasny/ciemny motyw
     function applyTheme() {
         if (theme === 1) {
             // JASNY
@@ -223,13 +221,13 @@
         });
     }
 
-    // 4. Start – czekamy aż wygląd się załaduje
+    // Start – oczekiwanie na załadowanie wyglądu
     await loadAppearance();
     
     connectAppearanceWS();
 
     function connectAppearanceWS() {
-      // 5. WebSocket aktualizujący wygląd w locie
+      // WebSocket aktualizujący wygląd w locie
       const wsview = new WebSocket(`/ws/displays/appearance/${displayId}`);
 
       wsview.onmessage = async () => {
@@ -241,9 +239,7 @@
           setTimeout(connectAppearanceWS, 5000);
       };
     }
-    /* -----------------------------
-       WEBSOCKET – ODBIÓR DANYCH
-    ----------------------------- */
+    // WebSocket z danymi
   connectWS();
   
   function connectWS() {

@@ -72,7 +72,7 @@ export default function Displays() {
     const { address, width, height } = strategy(display);
 
     window.open(
-      address,
+      `/displays_views` + address,
       "_blank",
       `width=${width},height=${height},menubar=no,toolbar=no,location=no,status=no`
     );
@@ -134,7 +134,7 @@ export default function Displays() {
             onClick={() => setHoveredId(display.id)} // dla dotyku
           >
             <img
-              src={`/displays/${display.image_url}` || "/placeholder-display.jpg"}
+              src={`/displays_icons/${display.image_url}` || "/placeholder-display.jpg"}
               alt={display.name}
               style={styles.image}
             />

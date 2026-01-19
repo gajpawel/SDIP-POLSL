@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
-import UserList from "./pages/UserList";
-import EditUserForm from "./components/EditUserForm";
+import UserList from "./pages/Users/UserList";
+import EditUserForm from "./pages/Users/EditUserForm";
 import ProtectedRoute from "./components/ProtectedRoute";
 import TimeTable from "./pages/Timetable/TimeTable";
 import Layout from "./Layout";
